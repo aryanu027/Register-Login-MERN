@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const app = express();
 const BodyParser = require("body-parser");
+const Razorpay = require("razorpay");
 app.use(cors());
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -17,12 +18,71 @@ app.get("/", (req, res) => {
 });
 //Google auth
 const oAuth2Client = new OAuth2Client(
-  (process.env.CLIENT_ID =
-    "811917741144-gj3ubj3due8bakrpn03f05m7njrouh6r.apps.googleusercontent.com"),
-  (process.env.CLIENT_SECRET = "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"),
+  process.env.CLIENT_ID,
+  process.env.CLIENT_SECRET,
   "postmessage"
 );
+// ///  /// / / // / //
+app.post("/payment/orders", async (req, res) => {
+  try {
+    const instance = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_SECRET,
+    });
 
+    const options = {
+      amount: 100, // amount in smallest currency unit
+      currency: "INR",
+      receipt: "receipt_order_74394",
+    };
+
+    const order = await instance.orders.create(options);
+
+    if (!order) return res.status(500).send("Some error occured");
+
+    res.json(order);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+// app.post("/payment/success", async (req, res) => {
+//   try {
+//     // getting the details back from our font-end
+//     const {
+//       orderCreationId,
+//       razorpayPaymentId,
+//       razorpayOrderId,
+//       razorpaySignature,
+//     } = req.body;
+
+//     // Creating our own digest
+//     // The format should be like this:
+//     // const digest = hmac_sha256(
+//     //   orderCreationId + "|" + razorpayPaymentId,
+//     //   "test"
+//     // );
+//     // generated_signature = hmac_sha256(
+//     //   orderCreationId + "|" + razorpayPaymentId,
+//     //   process.env.CLIENT_SECRET
+//     // );
+//     const shasum = crypto.createHmac("sha256", process.env.CLIENT_ID);
+//     shasum.update(`${orderCreationId}|${razorpayPaymentId}`);
+//     const digest = shasum.digest("hex");
+//     // comaparing our digest with the actual signature
+//     if (digest !== razorpaySignature)
+//       return res.status(400).json({ msg: "Transaction not legit!" });
+//     // THE PAYMENT IS LEGIT & VERIFIED
+//     // YOU CAN SAVE THE DETAILS IN YOUR DATABASE IF YOU WANT
+//     res.json({
+//       msg: "success",
+//       orderId: razorpayOrderId,
+//       paymentId: razorpayPaymentId,
+//     });
+//   } catch (error) {
+//     res.status(500).send(error);
+//   }
+// });
+// Google Auth
 app.post("/auth/google", async (req, res) => {
   const { tokens } = await oAuth2Client.getToken(req.body.code); // exchange code for tokens
   const Decrypt = jwt.decode(tokens.id_token);
