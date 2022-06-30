@@ -5,90 +5,26 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const app = express();
 const BodyParser = require("body-parser");
-const Razorpay = require("razorpay");
 app.use(cors());
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
+const otpGenerator = require("otp-generator");
 const playerData = require("./Model");
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb" }));
 app.use(BodyParser.urlencoded({ extended: true }));
-app.get("/", (req, res) => {
-  res.send("HELO");
-});
 //Google auth
 const oAuth2Client = new OAuth2Client(
   process.env.CLIENT_ID,
   process.env.CLIENT_SECRET,
   "postmessage"
 );
-// ///  /// / / // / //
-app.post("/payment/orders", async (req, res) => {
-  try {
-    const instance = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_SECRET,
-    });
-
-    const options = {
-      amount: 100, // amount in smallest currency unit
-      currency: "INR",
-      receipt: "receipt_order_74394",
-    };
-
-    const order = await instance.orders.create(options);
-
-    if (!order) return res.status(500).send("Some error occured");
-
-    res.json(order);
-  } catch (error) {
-    res.status(500).send(error);
-  }
-});
-// app.post("/payment/success", async (req, res) => {
-//   try {
-//     // getting the details back from our font-end
-//     const {
-//       orderCreationId,
-//       razorpayPaymentId,
-//       razorpayOrderId,
-//       razorpaySignature,
-//     } = req.body;
-
-//     // Creating our own digest
-//     // The format should be like this:
-//     // const digest = hmac_sha256(
-//     //   orderCreationId + "|" + razorpayPaymentId,
-//     //   "test"
-//     // );
-//     // generated_signature = hmac_sha256(
-//     //   orderCreationId + "|" + razorpayPaymentId,
-//     //   process.env.CLIENT_SECRET
-//     // );
-//     const shasum = crypto.createHmac("sha256", process.env.CLIENT_ID);
-//     shasum.update(`${orderCreationId}|${razorpayPaymentId}`);
-//     const digest = shasum.digest("hex");
-//     // comaparing our digest with the actual signature
-//     if (digest !== razorpaySignature)
-//       return res.status(400).json({ msg: "Transaction not legit!" });
-//     // THE PAYMENT IS LEGIT & VERIFIED
-//     // YOU CAN SAVE THE DETAILS IN YOUR DATABASE IF YOU WANT
-//     res.json({
-//       msg: "success",
-//       orderId: razorpayOrderId,
-//       paymentId: razorpayPaymentId,
-//     });
-//   } catch (error) {
-//     res.status(500).send(error);
-//   }
-// });
-// Google Auth
 app.post("/auth/google", async (req, res) => {
   const { tokens } = await oAuth2Client.getToken(req.body.code); // exchange code for tokens
   const Decrypt = jwt.decode(tokens.id_token);
   res.json(Decrypt);
 });
-
 app.post("/auth/google/refresh-token", async (req, res) => {
   const user = new UserRefreshClient(
     clientId,
@@ -104,10 +40,10 @@ app.post("/SignUp", async (req, res) => {
   try {
     const existingUser = await playerData.find({ email });
     if (existingUser.email === email) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({ message: "UAE" });
     }
     if (password !== confirmedPassword) {
-      return res.status(400).json({ message: "Passwords dont match" });
+      return res.status(400).json({ message: "PDM" });
     }
     const hashpassword = await bcrypt.hash(password, 12);
     //
@@ -117,13 +53,102 @@ app.post("/SignUp", async (req, res) => {
       name: `${firstName} ${lastName}`,
     });
     const token = jwt.sign({ email: newUser.email, id: newUser._id }, "test");
+    const OTP = otpGenerator.generate(6, {
+      upperCaseAlphabets: false,
+      lowerCaseAlphabets: false,
+      specialChars: false,
+      digits: true,
+    });
+    let transporter = nodemailer.createTransport({
+      host: "smtp.office365.com",
+      port: 587,
+      secure: false,
+      service: "outlook",
+      tls: {
+        rejectUnauthorized: false,
+      },
+      auth: {
+        user: process.env.EMAIL,
+        pass: process.env.PASSWORD ,
+      },
+    });
+    await transporter
+      .sendMail({
+        from: process.env.EMAIL, // sender address
+        to: `${newUser.email}`, // list of receivers
+        subject: "OTP for registeration", // Subject line
+        text: "OTP for your registeration request", // plain text body
+        html: `
+        <h3>Your OTP is: </h3>
+        <h1>${OTP}</h1>`, // html body
+      })
+      .then((res) => console.log(res))
+      .catch((err) => console.log(err));
+
     return res.status(201).json({
-      message: "OK",
+      otp: OTP,
     });
   } catch (error) {
     res.status(500).json({ message: "something went wrong" });
   }
 });
+app.post("/resetpass", async (req, res) => {
+  try {
+    const { email } = req.body;
+    console.log(email);
+    const OTP = otpGenerator.generate(6, {
+      upperCaseAlphabets: false,
+      lowerCaseAlphabets: false,
+      specialChars: false,
+      digits: true,
+    });
+    console.log(OTP);
+    let transporter = nodemailer.createTransport({
+      host: "smtp.office365.com",
+      port: 587,
+      secure: false,
+      service: "outlook",
+      tls: {
+        rejectUnauthorized: false,
+      },
+      auth: {
+        user: process.env.EMAIL,
+        pass: process.env.PASSWORD ,
+      },
+    });
+    await transporter
+      .sendMail({
+        from: "aryanumat123@outlook.com", // sender address
+        to: `${email}`, // list of receivers
+        subject: "OTP for registeration", // Subject line
+        text: "OTP for your registeration request", // plain text body
+        html: `
+        <h3>Your OTP is: </h3>
+        <h1>${OTP}</h1>`, // html body
+      })
+      .then((res) => console.log(res))
+      .catch((err) => console.log(err));
+
+    return res.status(201).json({
+      otp: OTP,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "something went wrong" });
+  }
+});
+app.patch("/update", async (req, res) => {
+  try {
+    const { password, confirmedPassword, email } = req.body;
+    const existingUser = await playerData.findOne({ email });
+    if (password === confirmedPassword) {
+      existingUser.password = password;
+    }
+    res.status(200).json({ message: "OK"})
+  } catch (error) {
+    res.status(500).json({ message: "something went wrong" });
+  }
+});
+//
 app.post("/SignIn", async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -150,6 +175,7 @@ app.post("/SignIn", async (req, res) => {
     res.status(500).json({ message: "something went wrong" });
   }
 });
+//
 const CONNECTION_URL =
   "mongodb+srv://aryan12:xdLYHHytVkGR9ghG@cluster0.vxbnxjf.mongodb.net/?retryWrites=true&w=majority";
 mongoose
