@@ -6,8 +6,10 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import React from "react";
 import { FcGoogle } from "react-icons/fc";
+import { MdVisibility, MdVisibilityOff } from "react-icons/md";
 import { Link, useNavigate } from "react-router-dom";
 function Login() {
+  const [ps, setps] = React.useState("password");
   const googleLogin = useGoogleLogin({
     onSuccess: async ({ code }) => {
       const tokens = await axios
@@ -84,13 +86,30 @@ function Login() {
             onChange={handleChange}
           />
           <TextField
-            style={{ width: 300, paddingTop: 30 }}
+            style={{ width: 270, paddingTop: 30, paddingLeft: 35 }}
             id="outlined-password-input"
             placeholder="Password"
             name="password"
+            type={ps}
             value={user.password}
             onChange={handleChange}
           />
+          <Button
+            style={{ marginTop: 40, width: 20 }}
+            onClick={() => {
+              if (ps === "password") {
+                setps("text");
+              } else {
+                setps("password");
+              }
+            }}
+          >
+            {ps == "text" ? (
+              <MdVisibilityOff style={{ width: 20, height: 20 }} />
+            ) : (
+              <MdVisibility style={{ width: 20, height: 20 }} />
+            )}
+          </Button>
           <br></br>
           <div>
             <Button
@@ -101,6 +120,9 @@ function Login() {
             >
               Login
             </Button>
+              <Link to="resetpass" style={{ fontSize: 10, marginLeft: 5 }}>
+                Forgot your password?
+              </Link>
             <br />
             OR
             <br />

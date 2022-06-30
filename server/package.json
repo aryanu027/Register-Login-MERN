@@ -19,7 +19,9 @@
     "google-auth-library": "^8.0.3",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^6.4.0",
+    "nodemailer": "^6.7.6",
     "nodemon": "^2.0.16",
+    "otp-generator": "^4.0.0",
     "razorpay": "^2.8.1"
   }
 }
